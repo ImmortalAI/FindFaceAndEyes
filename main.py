@@ -3,7 +3,7 @@ import cv2
 # Загрузка предобученных каскадов Хаара для детекции лиц и глаз
 # GitHub OpenCV: https://github.com/opencv/opencv/tree/master/data/haarcascades
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
+eye_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
 
 
 # Функция для детекции лиц и глаз на кадре
