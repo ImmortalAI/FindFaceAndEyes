@@ -1,58 +1,101 @@
 import cv2
+import tkinter as tk
+from tkinter import messagebox
+from PIL import Image, ImageTk
+import os
 
-# Загрузка предобученных каскадов Хаара для детекции лиц и глаз
-# GitHub OpenCV: https://github.com/opencv/opencv/tree/master/data/haarcascades
-face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-eye_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
+class FaceEyeDetectorApp:
+    def __init__(self, window, window_title):
+        self.window = window
+        self.window.title(window_title)
+        
+        # Задаём начальный размер окна
+        self.window_width = 640
+        self.window_height = 540
+        self.window.geometry(f"{self.window_width}x{self.window_height}")
+        self.window.resizable(False, False)   # запрещаем менять размер окна (по желанию)
 
+        # Загружаем Haar-каскады
+        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        self.eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
 
-# Функция для детекции лиц и глаз на кадре
-def detect_faces_and_eyes(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        # Открываем веб-камеру
+        self.vid = cv2.VideoCapture(0)
+        # Задаём разрешение камеры
+        self.vid.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Синий прямоугольник вокруг лица
-        roi_gray = gray[y:y + h, x:x + w]
-        roi_color = frame[y:y + h, x:x + w]
-        eyes = eye_cascade.detectMultiScale(roi_gray)
+        # Canvas для отображения видео
+        self.canvas = tk.Canvas(window, width=self.window_width, height=480, bg="black")
+        self.canvas.pack(pady=5)
 
-        for (ex, ey, ew, eh) in eyes:
-            cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)  # Зеленый прямоугольник вокруг глаз
+        # Кнопки "Сделать скриншот" и "Выход"
+        btn_frame = tk.Frame(window)
+        btn_frame.pack(pady=5)
 
-    return frame
+        self.btn_screenshot = tk.Button(btn_frame, text="Сделать скриншот", width=20, command=self.screenshot)
+        self.btn_screenshot.pack(side=tk.LEFT, padx=10)
 
+        self.btn_exit = tk.Button(btn_frame, text="Выход", width=15, command=self.exit_app)
+        self.btn_exit.pack(side=tk.LEFT, padx=10)
 
-def main():
-    # Инициализация веб-камеры (0 - встроенная камера)
-    cap = cv2.VideoCapture(0)
+        self.delay = 15  # миллисекунд
+        self.update()
 
-    if not cap.isOpened():
-        print("Ошибка: Не удалось открыть веб-камеру.")
-        return
+        self.window.mainloop()
 
-    print("Нажмите 'q' для выхода.")
+    def update(self):
+        ret, frame = self.vid.read()
+        if ret:
+            # Обнаружение лиц и глаз
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("Ошибка: Не удалось захватить кадр.")
-            break
+            for (x, y, w, h) in faces:
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                roi_gray = gray[y:y+h, x:x+w]
+                roi_color = frame[y:y+h, x:x+w]
+                eyes = self.eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.1, minNeighbors=10)
+                for (ex, ey, ew, eh) in eyes:
+                    cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)
 
-        # Детекция и отрисовка
-        processed_frame = detect_faces_and_eyes(frame)
+            # Масштабируем кадр под размер canvas 
+            frame_resized = cv2.resize(frame, (self.window_width, 480), interpolation=cv2.INTER_AREA)
 
-        # Отображение в окне
-        cv2.imshow('Детекция лиц и глаз', processed_frame)
+            # Конвертируем для Tkinter
+            self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)))
+            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-        # Выход по нажатию 'q'
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        self.window.after(self.delay, self.update)
 
-    # Освобождение ресурсов
-    cap.release()
-    cv2.destroyAllWindows()
+    def screenshot(self):
+        ret, frame = self.vid.read()
+        if ret:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
+
+            for (x, y, w, h) in faces:
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                roi_gray = gray[y:y+h, x:x+w]
+                roi_color = frame[y:y+h, x:x+w]
+                eyes = self.eye_cascade.detectMultiScale(roi_gray, 1.1, 10)
+                for (ex, ey, ew, eh) in eyes:
+                    cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)
+
+            # Сохраняем в оригинальном разрешении камеры
+            filename = "screenshot.png"
+            i = 1
+            while os.path.exists(filename):
+                filename = f"screenshot_{i}.png"
+                i += 1
+            cv2.imwrite(filename, frame)
+            messagebox.showinfo("Скриншот", f"Сохранён как {filename}")
+
+    def exit_app(self):
+        if messagebox.askokcancel("Выход", "Закрыть приложение?"):
+            self.vid.release()
+            self.window.destroy()
 
 
 if __name__ == "__main__":
-    main()
+    FaceEyeDetectorApp(tk.Tk(), "Детектор лиц и глаз")
