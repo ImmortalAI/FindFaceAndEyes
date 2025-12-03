@@ -13,7 +13,7 @@ class FaceEyeDetectorApp:
         self.window_width = 640
         self.window_height = 540
         self.window.geometry(f"{self.window_width}x{self.window_height}")
-        self.window.resizable(False, False)   # запрещаем менять размер окна (по желанию)
+        self.window.resizable(False, False) 
 
         # Загружаем Haar-каскады
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -39,7 +39,7 @@ class FaceEyeDetectorApp:
         self.btn_exit = tk.Button(btn_frame, text="Выход", width=15, command=self.exit_app)
         self.btn_exit.pack(side=tk.LEFT, padx=10)
 
-        self.delay = 15  # миллисекунд
+        self.delay = 15
         self.update()
 
         self.window.mainloop()
@@ -59,10 +59,9 @@ class FaceEyeDetectorApp:
                 for (ex, ey, ew, eh) in eyes:
                     cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)
 
-            # Масштабируем кадр под размер canvas 
+            # Масштабируем кадр под размер полотна
             frame_resized = cv2.resize(frame, (self.window_width, 480), interpolation=cv2.INTER_AREA)
 
-            # Конвертируем для Tkinter
             self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)))
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
@@ -82,7 +81,6 @@ class FaceEyeDetectorApp:
                 for (ex, ey, ew, eh) in eyes:
                     cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)
 
-            # Сохраняем в оригинальном разрешении камеры
             filename = "screenshot.png"
             i = 1
             while os.path.exists(filename):
